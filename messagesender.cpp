@@ -9,15 +9,14 @@ MessageSender::MessageSender(){
     while (query.next())
         lastMessage = query.value(0).toInt();
 
-    connect(&server, SIGNAL(startDispatching()), SLOT(start()));
 }
+
+void MessageSender::setConnections(QHash<qintptr, Connection *> *connections){
+    this->connections = connections;
+}
+
 
 void MessageSender::start(){
-    if(!isRunning())
-        run();
-}
-
-void MessageSender::run(){
     QSqlQuery query;
     while(true){
         query.prepare("SELECT Sender, Text, Time FROM messages WHERE id = ?");
@@ -36,7 +35,8 @@ void MessageSender::run(){
         }
 
         QJsonDocument document(result);
-        for(User* a : *server.getConnections())
+        for(Connection* a : *connections)
             a->send(document);
     }
+    emit finished();
 }

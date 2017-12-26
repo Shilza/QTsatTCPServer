@@ -1,8 +1,7 @@
 #include "smtp.h"
 
 
-Smtp::Smtp( const QString &user, const QString &pass, const QString &host, int port, int timeout )
-{
+Smtp::Smtp( const QString &user, const QString &pass, const QString &host, int port, int timeout ){
     socket = new QSslSocket(this);
 
     connect(socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
@@ -22,8 +21,7 @@ Smtp::Smtp( const QString &user, const QString &pass, const QString &host, int p
 
 }
 
-void Smtp::sendMail(const QString &from, const QString &to, const QString &subject, const QString &body)
-{
+void Smtp::sendMail(const QString &from, const QString &to, const QString &subject, const QString &body){
     message = "To: " + to + "\n";
     message.append("From: " + from + "\n");
     message.append("Subject: " + subject + "\n");
@@ -36,81 +34,63 @@ void Smtp::sendMail(const QString &from, const QString &to, const QString &subje
     state = Init;
     socket->connectToHostEncrypted(host, port); //"smtp.gmail.com" and 465 for gmail TLS
     if (!socket->waitForConnected(timeout)) {
-         qDebug() << socket->errorString();
+        //
+         //qDebug() << socket->errorString();
      }
 
     t = new QTextStream( socket );
 }
 
-Smtp::~Smtp()
-{
+Smtp::~Smtp(){
     delete t;
     delete socket;
 }
-void Smtp::stateChanged(QAbstractSocket::SocketState socketState)
-{
+void Smtp::stateChanged(QAbstractSocket::SocketState socketState){
 
-    qDebug() <<"stateChanged " << socketState;
+    //qDebug() <<"stateChanged " << socketState;
 }
 
-void Smtp::errorReceived(QAbstractSocket::SocketError socketError)
-{
-    qDebug() << "error " <<socketError;
+void Smtp::errorReceived(QAbstractSocket::SocketError socketError){
+    //qDebug() << "error " <<socketError;
 }
 
-void Smtp::disconnected()
-{
+void Smtp::disconnected(){
 
-    qDebug() <<"disconneted";
-    qDebug() << "error "  << socket->errorString();
+    //qDebug() <<"disconneted";
+    //qDebug() << "error "  << socket->errorString();
 }
 
-void Smtp::connected()
-{
-    qDebug() << "Connected ";
+void Smtp::connected(){
+    //qDebug() << "Connected ";
 }
 
 void Smtp::readyRead(){
-
-     qDebug() <<"readyRead";
+    // qDebug() <<"readyRead";
     // SMTP is line-oriented
 
     QString responseLine;
-    do
-    {
+    do{
         responseLine = socket->readLine();
         response += responseLine;
-    }
-    while ( socket->canReadLine() && responseLine[3] != ' ' );
+    }while(socket->canReadLine() && responseLine[3] != ' ');
 
-    responseLine.truncate( 3 );
+    responseLine.truncate(3);
 
-    qDebug() << "Server response code:" <<  responseLine;
-    qDebug() << "Server response: " << response;
+    //qDebug() << "Server response code: " <<  responseLine;
+    //qDebug() << "Server response: " << response;
 
-    if ( state == Init && responseLine == "220" )
-    {
+    if(state == Init && responseLine == "220"){
         // banner was okay, let's go on
         *t << "EHLO localhost" <<"\r\n";
         t->flush();
 
         state = HandShake;
     }
-    //No need, because I'm using socket->startClienEncryption() which makes the SSL handshake for you
-    /*else if (state == Tls && responseLine == "250")
-    {
-        // Trying AUTH
-        qDebug() << "STarting Tls";
-        *t << "STARTTLS" << "\r\n";
-        t->flush();
-        state = HandShake;
-    }*/
-    else if (state == HandShake && responseLine == "250")
-    {
+
+    else if(state == HandShake && responseLine == "250"){
         socket->startClientEncryption();
-        if(!socket->waitForEncrypted(timeout))
-        {
-            qDebug() << socket->errorString();
+        if(!socket->waitForEncrypted(timeout)){
+            //qDebug() << socket->errorString();
             state = Close;
         }
 
@@ -121,18 +101,18 @@ void Smtp::readyRead(){
         t->flush();
         state = Auth;
     }
-    else if (state == Auth && responseLine == "250")
+    else if(state == Auth && responseLine == "250")
     {
         // Trying AUTH
-        qDebug() << "Auth";
+        //qDebug() << "Auth";
         *t << "AUTH LOGIN" << "\r\n";
         t->flush();
         state = User;
     }
-    else if (state == User && responseLine == "334")
+    else if(state == User && responseLine == "334")
     {
         //Trying User
-        qDebug() << "Username";
+        //qDebug() << "Username";
         //GMAIL is using XOAUTH2 protocol, which basically means that password and username has to be sent in base64 coding
         //https://developers.google.com/gmail/xoauth2_protocol
         *t << QByteArray().append(user).toBase64()  << "\r\n";
@@ -140,47 +120,47 @@ void Smtp::readyRead(){
 
         state = Pass;
     }
-    else if (state == Pass && responseLine == "334")
+    else if(state == Pass && responseLine == "334")
     {
         //Trying pass
-        qDebug() << "Pass";
+        //qDebug() << "Pass";
         *t << QByteArray().append(pass).toBase64() << "\r\n";
         t->flush();
 
         state = Mail;
     }
-    else if ( state == Mail && responseLine == "235" )
+    else if( state == Mail && responseLine == "235" )
     {
         // HELO response was okay (well, it has to be)
 
         //Apperantly for Google it is mandatory to have MAIL FROM and RCPT email formated the following way -> <email@gmail.com>
-        qDebug() << "MAIL FROM:<" << from << ">";
+        //qDebug() << "MAIL FROM:<" << from << ">";
         *t << "MAIL FROM:<" << from << ">\r\n";
         t->flush();
         state = Rcpt;
     }
-    else if ( state == Rcpt && responseLine == "250" )
+    else if( state == Rcpt && responseLine == "250" )
     {
         //Apperantly for Google it is mandatory to have MAIL FROM and RCPT email formated the following way -> <email@gmail.com>
         *t << "RCPT TO:<" << rcpt << ">\r\n"; //r
         t->flush();
         state = Data;
     }
-    else if ( state == Data && responseLine == "250" )
+    else if( state == Data && responseLine == "250" )
     {
 
         *t << "DATA\r\n";
         t->flush();
         state = Body;
     }
-    else if ( state == Body && responseLine == "354" )
+    else if( state == Body && responseLine == "354" )
     {
 
         *t << message << "\r\n.\r\n";
         t->flush();
         state = Quit;
     }
-    else if ( state == Quit && responseLine == "250" )
+    else if( state == Quit && responseLine == "250" )
     {
 
         *t << "QUIT\r\n";
@@ -189,7 +169,7 @@ void Smtp::readyRead(){
         state = Close;
         emit status( tr( "Message sent" ) );
     }
-    else if ( state == Close )
+    else if( state == Close )
     {
         deleteLater();
         return;

@@ -1,37 +1,30 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "user.h"
-#include "def.h"
 #include <QObject>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QVector>
 #include <QThread>
+#include "connection.h"
+#include "messagesender.h"
+#include "def.h"
+
 
 class Server : public QTcpServer{
     Q_OBJECT
 public:    
     explicit Server(QObject *parent = nullptr);
-    QHash<qintptr, User*>* getConnections();
 
 private:
     void incomingConnection(qintptr handle);
-    QHash<qintptr, User*> connections;
-    QHash<QString, QString> registrationList;
-    QHash<QString, QString> recoveryList;
+    QHash<qintptr, Connection*> connections;
+    MessageSender messageSender;
+    QThread senderThread;
 
 private slots:
     void deleteConnection(qintptr);
     void dispatchingMessage();
-    void newRegistration(QString, QString);
-    void registrationCode(QJsonObject);
-    void newRecovery(QString, QString);
-    void recoveryCode(QString, QString);
-    void recoveryNewPass(QString, QString);
-
-signals:
-    void startDispatching();
 };
 
 #endif // SERVER_H

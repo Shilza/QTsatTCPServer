@@ -20,15 +20,15 @@ LIBS += -LC:/OpenSSL-Win32/lib -llibssl
 
 SOURCES += main.cpp \
     server.cpp \
-    user.cpp \
     messagesender.cpp \
     distance_damerau_levenshtein.cpp \
-    smtp.cpp
+    smtp.cpp \
+    connection.cpp
 
 HEADERS += \
     server.h \
-    user.h \
     def.h \
     messagesender.h \
     distance_damerau_levenshtein.h \
-    smtp.h
+    smtp.h \
+    connection.h

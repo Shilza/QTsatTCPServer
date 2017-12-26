@@ -1,26 +1,28 @@
 #ifndef SENDER_H
 #define SENDER_H
 
-#include <QThread>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QVariant>
-#include "server.h"
+#include "connection.h"
 
-class MessageSender : public QThread{
+class MessageSender : public QObject{
     Q_OBJECT
 public:
     MessageSender();
-
-private:
-    void run() override;
-    quint64 lastMessage = 0;
-    Server server;
+    void setConnections(QHash<qintptr, Connection *> *connections);
 
 public slots:
     void start();
+
+private:
+    quint64 lastMessage = 0;
+    QHash<qintptr, Connection*> *connections;
+
+signals:
+    void finished();
 };
 
 #endif // SENDER_H

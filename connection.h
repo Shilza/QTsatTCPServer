@@ -11,14 +11,14 @@
 #include <QQueue>
 #include <QCryptographicHash>
 #include "distance_damerau_levenshtein.h"
+#include "smtp.h"
 #include "def.h"
 
-class User : public QObject{
+class Connection : public QObject{
     Q_OBJECT
 public:
-    User(qintptr handle, QObject *parent = nullptr);
+    Connection(qintptr handle, QObject *parent = nullptr);
     void send(QJsonDocument message);
-    QTcpSocket* getSocket();
 
 private:
     QTcpSocket *socket;
@@ -28,18 +28,25 @@ private:
     quint8 floodCounter = 0;
     int floodTimer = 0;
 
+    QJsonObject authorization(QJsonObject);
+    QJsonObject registration(QJsonObject);
+    QJsonObject registrationCode(QJsonObject);
+    QJsonObject recovery(QJsonObject);
+    QJsonObject recoveryCode(QJsonObject);
+    QJsonObject recoveryNewPass(QJsonObject);
+    QJsonObject doesNicknameExist(QJsonObject);
+    QJsonObject doesEmailExist(QJsonObject);
+    QJsonObject sendGlobalMessage(QJsonObject);
+
 signals:
     void disconnected(qintptr);
     void dispatchMessage();
-    void newRegistration(QString, QString);
-    void registrationCode(QJsonObject);
-    void newRecovery(QString, QString);
-    void recoveryCode(QString, QString);
-    void recoveryNewPass(QString, QString);
+    void passwordChanged(QString, QString);
 
 private slots:
     void disconnecting();
-    void reading();
+    void controller();
+    void sendEmailPasswordChanged(QString email, QString nickname);
 };
 
 #endif // USER_H

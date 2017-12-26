@@ -1,8 +1,8 @@
 #include <QCoreApplication>
 #include <QSqlDatabase>
-#include "messagesender.h"
+#include <QSqlError>
+#include "server.h"
 #include "def.h"
-#include "Smtp.h"
 
 
 int main(int argc, char *argv[]){
@@ -17,11 +17,7 @@ int main(int argc, char *argv[]){
     if(!db.open())
         return 1;
 
-    Smtp *smtp = new Smtp(" ", " ", "smtp.gmail.com");
-
-    smtp->sendMail("anatolich1995@gmail.com", "evertonnaxoi@gmail.com" , "This is a subject", "This is a body");
-
-//    MessageSender server;
+    Server server;
 
     return a.exec();
 }
