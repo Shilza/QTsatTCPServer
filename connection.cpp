@@ -245,7 +245,7 @@ QJsonObject Connection::sendGlobalMessage(QJsonObject request){
     QJsonObject response;
     response.insert("Target", "Message status");
 
-    QString text = request.value("message").toString();
+    QString text = request.value("Message").toString();
 
     if(text.indexOf('\n')!=-1){
         while(text.indexOf("  ") != -1)
@@ -310,8 +310,12 @@ QJsonObject Connection::sendGlobalMessage(QJsonObject request){
         query.bindValue(":sender", nickname);
         query.bindValue(":text", text);
         query.bindValue(":time", QDateTime::currentDateTime().toTime_t());
-        if(query.exec())
+        if(query.exec()){
+            qDebug() << "sfef";
             emit dispatchMessage();
+        }
+        else
+            qDebug() << query.lastError().text();
     }
     return response;
 }

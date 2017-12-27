@@ -17,6 +17,8 @@ int main(int argc, char *argv[]){
     if(!db.open())
         return 1;
 
+    qsrand(QTime(0,0,0).msecsTo(QTime::currentTime()));
+
     Server server;
 
     return a.exec();

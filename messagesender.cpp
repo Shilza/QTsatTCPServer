@@ -8,7 +8,6 @@ MessageSender::MessageSender(){
 
     while (query.next())
         lastMessage = query.value(0).toInt();
-
 }
 
 void MessageSender::setConnections(QHash<qintptr, Connection *> *connections){
@@ -19,9 +18,12 @@ void MessageSender::setConnections(QHash<qintptr, Connection *> *connections){
 void MessageSender::start(){
     QSqlQuery query;
     while(true){
+        qDebug() << lastMessage;
         query.prepare("SELECT Sender, Text, Time FROM messages WHERE id = ?");
         query.bindValue(0, ++lastMessage);
-        if(!query.exec()){
+        query.exec();
+
+        if(!query.next()){
             lastMessage--;
             break;
         }
