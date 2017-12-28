@@ -15,6 +15,7 @@ Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
 }
 
 void Connection::send(QJsonDocument message){
+    qDebug() << message.toJson();
     socket->write(message.toJson());
 }
 
@@ -311,7 +312,6 @@ QJsonObject Connection::sendGlobalMessage(QJsonObject request){
         query.bindValue(":text", text);
         query.bindValue(":time", QDateTime::currentDateTime().toTime_t());
         if(query.exec()){
-            qDebug() << "sfef";
             emit dispatchMessage();
         }
         else

@@ -4,12 +4,12 @@ Server::Server(QObject *parent) : QTcpServer(parent){
     connections.clear();
 
     messageSender.setConnections(&connections);
-    messageSender.moveToThread(&senderThread);
+    //messageSender.moveToThread(&senderThread);
 
     listen(QHostAddress::Any, 40000);
 
-    connect(&senderThread, SIGNAL(started()), &messageSender, SLOT(start()));
-    connect(&messageSender, SIGNAL(finished()), &senderThread, SLOT(quit()));
+    //connect(&senderThread, SIGNAL(started()), &messageSender, SLOT(start()));
+    //connect(&messageSender, SIGNAL(finished()), &senderThread, SLOT(quit()));
 }
 
 
@@ -24,6 +24,6 @@ void Server::deleteConnection(qintptr key){
 }
 
 void Server::dispatchingMessage(){
-    if(!senderThread.isRunning())
-        senderThread.start();
+    if(!messageSender.isRunning)
+        messageSender.start();
 }

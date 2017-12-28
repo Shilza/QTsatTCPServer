@@ -16,29 +16,33 @@ void MessageSender::setConnections(QHash<qintptr, Connection *> *connections){
 
 
 void MessageSender::start(){
+    isRunning = true;
     QSqlQuery query;
     while(true){
-        qDebug() << lastMessage;
         query.prepare("SELECT Sender, Text, Time FROM messages WHERE id = ?");
         query.bindValue(0, ++lastMessage);
         query.exec();
 
-        if(!query.next()){
+        QJsonObject result;
+        bool temp = false;
+        while (query.next()){
+            temp = true;
+            result.insert("Target", "Message delivery");
+            result.insert("Nickname", query.value(0).toString());
+            result.insert("Message", query.value(1).toString());
+            result.insert("Time", query.value(2).toInt());
+        }
+
+        if(!temp){
             lastMessage--;
             break;
         }
 
-        QJsonObject result;
-        while (query.next()){
-            result.insert("Target", "Message delivery");
-            result.insert("Nickname", query.value(0).toString());
-            result.insert("Message", query.value(1).toString());
-            result.insert("Message", query.value(2).toInt());
-        }
-
         QJsonDocument document(result);
-        for(Connection* a : *connections)
+        for(Connection* a : *connections){
             a->send(document);
+        }
     }
     emit finished();
+    isRunning = false;
 }

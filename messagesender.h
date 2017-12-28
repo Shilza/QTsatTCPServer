@@ -13,6 +13,7 @@ class MessageSender : public QObject{
 public:
     MessageSender();
     void setConnections(QHash<qintptr, Connection *> *connections);
+    bool isRunning = false;
 
 public slots:
     void start();
