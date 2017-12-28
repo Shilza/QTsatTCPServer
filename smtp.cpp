@@ -10,15 +10,12 @@ Smtp::Smtp( const QString &user, const QString &pass, const QString &host, int p
     connect(socket, SIGNAL(stateChanged(QAbstractSocket::SocketState)), this, SLOT(stateChanged(QAbstractSocket::SocketState)));
     connect(socket, SIGNAL(disconnected()), this,SLOT(disconnected()));
 
-
     this->user = user;
     this->pass = pass;
 
     this->host = host;
     this->port = port;
     this->timeout = timeout;
-
-
 }
 
 void Smtp::sendMail(const QString &from, const QString &to, const QString &subject, const QString &body){

@@ -332,24 +332,18 @@ void Connection::controller(){
     QJsonObject request = QJsonDocument::fromJson(receivedObject, &error).object();
     QJsonObject response;
     if(error.error == QJsonParseError::NoError){
-        if(request.value("Target").toString() == "Authorization"){
+        if(request.value("Target").toString() == "Authorization")
             response = authorization(request);
-        }
-        else if(request.value("Target").toString() == "Registration"){
+        else if(request.value("Target").toString() == "Registration")
             response = registration(request);
-        }
-        else if(request.value("Target").toString() == "Registration code"){
+        else if(request.value("Target").toString() == "Registration code")
             response = registrationCode(request);
-        }
-        else if(request.value("Target").toString() == "Recovery"){
+        else if(request.value("Target").toString() == "Recovery")
             response = recovery(request);
-        }
-        else if(request.value("Target").toString() == "Recovery code"){
+        else if(request.value("Target").toString() == "Recovery code")
             response = recoveryCode(request);
-        }
-        else if(request.value("Target").toString() == "Recovery new pass"){
+        else if(request.value("Target").toString() == "Recovery new pass")
             response = recoveryNewPass(request);
-        }
         else if(request.value("Target").toString() == "PMessage"){
             //TODO
         }
@@ -360,11 +354,10 @@ void Connection::controller(){
             response = sendGlobalMessage(request);
         }
         else if(request.value("Target").toString() == "Post"){
-
+            //TODO
         }
-        else if(request.value("Target").toString() == "DoesNicknameExist"){
+        else if(request.value("Target").toString() == "DoesNicknameExist")
             response = doesNicknameExist(request);
-        }
     }
     socket->write(QJsonDocument(response).toJson());
 }
