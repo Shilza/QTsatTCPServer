@@ -96,11 +96,11 @@ QJsonObject Connection::registrationCode(QJsonObject request){
         query.bindValue(0, request.value("Email").toString());
         query.exec();
 
-        query.prepare("INSERT INTO users (Email, Nickname, Password, Date) VALUES (:email, :nickname, :password, :date)");
-        query.bindValue(":email", request.value("Email").toString());
-        query.bindValue(":nickname", request.value("Nickname").toString());
-        query.bindValue(":password", request.value("Password").toString());
-        query.bindValue(":date", QDateTime::currentDateTime().toTime_t());
+        query.prepare("INSERT INTO users (Email, Nickname, Password, Date) VALUES (?, ?, ?, ?)");
+        query.bindValue(0, request.value("Email").toString());
+        query.bindValue(1, request.value("Nickname").toString());
+        query.bindValue(2, request.value("Password").toString());
+        query.bindValue(3, QDateTime::currentDateTime().toTime_t());
         query.exec();
 
         response.insert("Value", "Registration successful");
@@ -242,7 +242,7 @@ QJsonObject Connection::doesNicknameExist(QJsonObject request){
     return response;
 }
 
-QJsonObject Connection::sendGlobalMessage(QJsonObject request){
+void Connection::sendGlobalMessage(QJsonObject request){
     QJsonObject response;
     response.insert("Target", "Message status");
 
@@ -312,25 +312,29 @@ QJsonObject Connection::sendGlobalMessage(QJsonObject request){
         query.bindValue(":text", text);
         query.bindValue(":time", QDateTime::currentDateTime().toTime_t());
         if(query.exec()){
+            socket->write(QJsonDocument(response).toJson());
+            socket->waitForBytesWritten();
             emit dispatchMessage();
+            return;
         }
         else
             qDebug() << query.lastError().text();
     }
-    return response;
+    socket->write(QJsonDocument(response).toJson());
 }
 
 void Connection::disconnecting(){
     emit disconnected(socket->socketDescriptor());
-    socket->deleteLater();
 }
 
 void Connection::controller(){
     QByteArray receivedObject = socket->readAll();
+
     QJsonParseError error;
 
     QJsonObject request = QJsonDocument::fromJson(receivedObject, &error).object();
     QJsonObject response;
+
     if(error.error == QJsonParseError::NoError){
         if(request.value("Target").toString() == "Authorization")
             response = authorization(request);
@@ -351,7 +355,8 @@ void Connection::controller(){
             if(QDateTime::currentDateTime().toTime_t() < floodTimer)
                 return;
 
-            response = sendGlobalMessage(request);
+            sendGlobalMessage(request);
+            return;
         }
         else if(request.value("Target").toString() == "Post"){
             //TODO
@@ -359,6 +364,7 @@ void Connection::controller(){
         else if(request.value("Target").toString() == "DoesNicknameExist")
             response = doesNicknameExist(request);
     }
+
     socket->write(QJsonDocument(response).toJson());
 }
 

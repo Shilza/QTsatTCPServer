@@ -36,7 +36,8 @@ private:
     QJsonObject recoveryNewPass(QJsonObject);
     QJsonObject doesNicknameExist(QJsonObject);
     QJsonObject doesEmailExist(QJsonObject);
-    QJsonObject sendGlobalMessage(QJsonObject);
+
+    void sendGlobalMessage(QJsonObject);
 
 signals:
     void disconnected(qintptr);

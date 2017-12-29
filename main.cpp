@@ -14,6 +14,7 @@ int main(int argc, char *argv[]){
     db.setUserName("root");
     //db.setUserName(DATABASE_USER);
     //db.setPassword(DATABASE_PASSWORD);
+    db.setConnectOptions("MYSQL_OPT_RECONNECT=1");
     if(!db.open())
         return 1;
 
