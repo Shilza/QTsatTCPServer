@@ -27,6 +27,7 @@ private:
     QQueue<QString> lastMessages;
     quint8 floodCounter = 0;
     int floodTimer = 0;
+    int banFinish = 0;
 
     QJsonObject authorization(QJsonObject);
     QJsonObject registration(QJsonObject);
@@ -38,6 +39,7 @@ private:
     QJsonObject doesEmailExist(QJsonObject);
 
     void sendGlobalMessage(QJsonObject);
+    QJsonObject banFinished();
 
 signals:
     void disconnected(qintptr);

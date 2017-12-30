@@ -37,6 +37,16 @@ QJsonObject Connection::authorization(QJsonObject request){
     if(id != ""){
         nickname = request.value("Login").toString();
         response.insert("Value", "Authorization successful");
+
+        query.prepare("SELECT LastBan FROM users WHERE Nickname = ?");
+        query.addBindValue(nickname);
+        query.exec();
+
+        while(query.next())
+            banFinish = query.value(0).toInt();
+
+        if(QDateTime::currentDateTime().toTime_t() < banFinish)
+            response.insert("Ban", banFinish);
     }
     else
         response.insert("Value", "Authorization failed");
@@ -243,6 +253,9 @@ QJsonObject Connection::doesNicknameExist(QJsonObject request){
 }
 
 void Connection::sendGlobalMessage(QJsonObject request){
+    if(QDateTime::currentDateTime().toTime_t() < banFinish)
+        return;
+
     QJsonObject response;
     response.insert("Target", "Message status");
 
@@ -271,27 +284,30 @@ void Connection::sendGlobalMessage(QJsonObject request){
                 count++;
         }
         if(count>=3 && floodCounter<3){
+            qDebug() << "Flood";
             floodCounter++;
-            floodTimer = QDateTime::currentDateTime().toTime_t()+3000*floodCounter;
-            response.insert("Value", "Message not delivered");
-            response.insert("Cause", "Flood");
-            response.insert("Time", floodTimer);
+            floodTimer = QDateTime::currentDateTime().toTime_t()+3*floodCounter;
+            response.insert("Value", "Flood");
+            response.insert("Time", 3000*floodCounter);
             isMessageGoingToBeSended = false;
         }
         else if(count>=3){
             QSqlQuery query;
-            query.prepare("UPDATE users SET 'Last ban' = ? WHERE Nickname = ?");
+            query.prepare("UPDATE users SET LastBan = ? WHERE Nickname = ?");
             query.bindValue(0, QDateTime::currentDateTime().toTime_t()+14400);//4 hours for flood
             query.bindValue(1, nickname);
-            query.exec();
+            if(!query.exec())
+                qDebug() << query.lastError().text();
 
             //for bans history
-            query.prepare("INSERT INTO users (Nickname, Message, Start time, Finish time, Cause) VALUES = (?, ?, ?, ?, 'Flood')");
+            banFinish = QDateTime::currentDateTime().toTime_t()+14400;
+            query.prepare("INSERT INTO bans (Nickname, Message, StartTime, FinishTime, Cause) VALUES (?, ?, ?, ?, 'Flood')");
             query.bindValue(0, nickname);
             query.bindValue(1, text);
             query.bindValue(2, QDateTime::currentDateTime().toTime_t());
-            query.bindValue(3, QDateTime::currentDateTime().toTime_t()+14400);
-            query.exec();
+            query.bindValue(3, banFinish);
+            if(!query.exec())
+                qDebug() << query.lastError().text();
 
             response.insert("Value", "Ban");
             response.insert("Time", int(QDateTime::currentDateTime().toTime_t()+14400));
@@ -321,6 +337,24 @@ void Connection::sendGlobalMessage(QJsonObject request){
             qDebug() << query.lastError().text();
     }
     socket->write(QJsonDocument(response).toJson());
+}
+
+QJsonObject Connection::banFinished(){
+    QJsonObject response;
+    response.insert("Target", "Ban finished");
+
+    QSqlQuery query;
+    query.prepare("SELECT LastBan FROM users WHERE Nickname = ?");
+    query.addBindValue(nickname);
+    query.exec();
+
+    uint time;
+    while(query.next())
+        time = query.value(0).toInt();
+
+    response.insert("Value", QDateTime::currentDateTime().toTime_t() <= time ? "True" : "False");
+
+    return response;
 }
 
 void Connection::disconnecting(){
@@ -363,6 +397,8 @@ void Connection::controller(){
         }
         else if(request.value("Target").toString() == "DoesNicknameExist")
             response = doesNicknameExist(request);
+        else if(request.value("Target").toString() == "Ban finished")
+            response = banFinished();
     }
 
     socket->write(QJsonDocument(response).toJson());
