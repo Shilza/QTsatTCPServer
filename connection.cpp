@@ -6,6 +6,7 @@ Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
     socket = new QTcpSocket(this);
     socket->setSocketDescriptor(handle);
     location = "";
+    nickname = "";
 
     lastMessages.clear();
 
@@ -17,6 +18,10 @@ Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
 void Connection::send(QJsonDocument message){
     qDebug() << message.toJson();
     socket->write(message.toJson());
+}
+
+QString Connection::getLocation(){
+    return location;
 }
 
 QJsonObject Connection::authorization(QJsonObject request){
@@ -36,6 +41,7 @@ QJsonObject Connection::authorization(QJsonObject request){
 
     if(id != ""){
         nickname = request.value("Login").toString();
+        location = "Global chat";
         response.insert("Value", "Authorization successful");
 
         query.prepare("SELECT LastBan FROM users WHERE Nickname = ?");
@@ -253,7 +259,7 @@ QJsonObject Connection::doesNicknameExist(QJsonObject request){
 }
 
 void Connection::sendGlobalMessage(QJsonObject request){
-    if(QDateTime::currentDateTime().toTime_t() < banFinish)
+    if(nickname == "" || location != "Global chat" || QDateTime::currentDateTime().toTime_t() < banFinish)
         return;
 
     QJsonObject response;
@@ -357,6 +363,16 @@ QJsonObject Connection::banFinished(){
     return response;
 }
 
+QJsonObject Connection::exit(){
+    nickname = "";
+    location = "";
+
+    QJsonObject response;
+    response.insert("Target", "Exit");
+
+    return response;
+}
+
 void Connection::disconnecting(){
     emit disconnected(socket->socketDescriptor());
 }
@@ -399,6 +415,8 @@ void Connection::controller(){
             response = doesNicknameExist(request);
         else if(request.value("Target").toString() == "Ban finished")
             response = banFinished();
+        else if(request.value("Target").toString() == "Exit")
+            response = exit();
     }
 
     socket->write(QJsonDocument(response).toJson());

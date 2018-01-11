@@ -19,6 +19,7 @@ class Connection : public QObject{
 public:
     Connection(qintptr handle, QObject *parent = nullptr);
     void send(QJsonDocument message);
+    QString getLocation();
 
 private:
     QTcpSocket *socket;
@@ -40,6 +41,7 @@ private:
 
     void sendGlobalMessage(QJsonObject);
     QJsonObject banFinished();
+    QJsonObject exit();
 
 signals:
     void disconnected(qintptr);
