@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QJsonArray>
 #include <QSqlQuery>
 #include <QDateTime>
 #include <QQueue>
@@ -38,6 +39,7 @@ private:
     QJsonObject recoveryNewPass(QJsonObject);
     QJsonObject doesNicknameExist(QJsonObject);
     QJsonObject doesEmailExist(QJsonObject);
+    QJsonObject bansHistory(int);
 
     void sendGlobalMessage(QJsonObject);
     QJsonObject banFinished();

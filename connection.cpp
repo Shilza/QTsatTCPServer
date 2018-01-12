@@ -258,6 +258,43 @@ QJsonObject Connection::doesNicknameExist(QJsonObject request){
     return response;
 }
 
+QJsonObject Connection::bansHistory(int page){
+    QJsonObject response;
+    response.insert("Target", "Bans history");
+
+    QSqlQuery query;
+
+    static int lastBan;
+
+    if(!page){
+        query.prepare("SELECT MAX(ID) FROM bans");
+        query.exec();
+
+        while (query.next())
+            lastBan = query.value(0).toInt();
+    }
+
+    query.prepare("SELECT Nickname, Cause, Moderator, StartTime, FinishTime FROM bans WHERE ID >= ? AND ID <= ?");
+    query.addBindValue(lastBan-30*(page+1) < 1 ? 1 : lastBan-30*(page+1));
+    query.addBindValue(lastBan-30*page);
+    query.exec();
+
+    QJsonArray array;
+    while(query.next()){
+        QJsonObject obj;
+        obj.insert("Nickname", query.value(0).toString());
+        obj.insert("Cause", query.value(1).toString());
+        obj.insert("Moderator", query.value(2).toString());
+        obj.insert("StartTime", query.value(3).toInt());
+        obj.insert("FinishTime", query.value(4).toInt());
+        array.append(obj);
+    }
+
+    response.insert("Page", array);
+
+    return response;
+}
+
 void Connection::sendGlobalMessage(QJsonObject request){
     if(nickname == "" || location != "Global chat" || QDateTime::currentDateTime().toTime_t() < banFinish)
         return;
@@ -307,7 +344,7 @@ void Connection::sendGlobalMessage(QJsonObject request){
 
             //for bans history
             banFinish = QDateTime::currentDateTime().toTime_t()+14400;
-            query.prepare("INSERT INTO bans (Nickname, Message, StartTime, FinishTime, Cause) VALUES (?, ?, ?, ?, 'Flood')");
+            query.prepare("INSERT INTO bans (Nickname, Message, StartTime, FinishTime, Cause, Moderator) VALUES (?, ?, ?, ?, 'Flood', 'System')");
             query.bindValue(0, nickname);
             query.bindValue(1, text);
             query.bindValue(2, QDateTime::currentDateTime().toTime_t());
@@ -329,10 +366,10 @@ void Connection::sendGlobalMessage(QJsonObject request){
         lastMessages.push_back(text);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO messages (Sender, Text, Time) VALUES (:sender, :text, :time)");
-        query.bindValue(":sender", nickname);
-        query.bindValue(":text", text);
-        query.bindValue(":time", QDateTime::currentDateTime().toTime_t());
+        query.prepare("INSERT INTO messages (Sender, Text, Time) VALUES (?, ?, ?)");
+        query.bindValue(0, nickname);
+        query.bindValue(1, text);
+        query.bindValue(2, QDateTime::currentDateTime().toTime_t());
         if(query.exec()){
             socket->write(QJsonDocument(response).toJson());
             socket->waitForBytesWritten();
@@ -417,6 +454,8 @@ void Connection::controller(){
             response = banFinished();
         else if(request.value("Target").toString() == "Exit")
             response = exit();
+        else if(request.value("Target").toString() == "Bans history")
+            response = bansHistory(request.value("Page").toInt());
     }
 
     socket->write(QJsonDocument(response).toJson());
