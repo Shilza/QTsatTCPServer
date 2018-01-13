@@ -275,8 +275,8 @@ QJsonObject Connection::bansHistory(int page){
     }
 
     query.prepare("SELECT Nickname, Cause, Moderator, StartTime, FinishTime FROM bans WHERE ID >= ? AND ID <= ?");
-    query.addBindValue(lastBan-30*(page+1) < 1 ? 1 : lastBan-30*(page+1));
-    query.addBindValue(lastBan-30*page);
+    query.addBindValue(lastBan-29*(page+1) < 1 ? 1 : lastBan-29*(page+1));
+    query.addBindValue(lastBan-29*page);
     query.exec();
 
     QJsonArray array;
@@ -291,6 +291,8 @@ QJsonObject Connection::bansHistory(int page){
     }
 
     response.insert("Page", array);
+    if(29*(page+1) > MAXIMUM_NUM_OF_BANS_TO_SHOW || 29*(page+1) >= lastBan)
+        response.insert("Value", "End");
 
     return response;
 }
@@ -441,7 +443,6 @@ void Connection::controller(){
         else if(request.value("Target").toString() == "GMessage"){
             if(QDateTime::currentDateTime().toTime_t() < floodTimer)
                 return;
-
             sendGlobalMessage(request);
             return;
         }
@@ -456,6 +457,10 @@ void Connection::controller(){
             response = exit();
         else if(request.value("Target").toString() == "Bans history")
             response = bansHistory(request.value("Page").toInt());
+        else if(request.value("Target").toString() == "Location"){
+            location = request.value("Value").toString() < 20 ? request.value("Value").toString() : request.value("Value").toString().left(20);
+            return;
+        }
     }
 
     socket->write(QJsonDocument(response).toJson());

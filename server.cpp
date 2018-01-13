@@ -6,7 +6,7 @@ Server::Server(QObject *parent) : QTcpServer(parent){
     messageSender.setConnections(&connections);
     //messageSender.moveToThread(&senderThread);
 
-    listen(QHostAddress::Any, 40000);
+    listen(QHostAddress::Any, PORT);
 
     //connect(&senderThread, SIGNAL(started()), &messageSender, SLOT(start()));
     //connect(&messageSender, SIGNAL(finished()), &senderThread, SLOT(quit()));
