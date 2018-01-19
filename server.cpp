@@ -1,6 +1,8 @@
 #include "server.h"
 
 Server::Server(QObject *parent) : QTcpServer(parent){
+    socket = new QTcpSocket(this);
+
     connections.clear();
 
     messageSender.setConnections(&connections);
@@ -26,4 +28,9 @@ void Server::deleteConnection(qintptr key){
 void Server::dispatchingMessage(){
     if(!messageSender.isRunning)
         messageSender.start();
+}
+
+void Server::ftpReading(){
+    QByteArray request = socket->readAll();
+    qDebug() << request;
 }

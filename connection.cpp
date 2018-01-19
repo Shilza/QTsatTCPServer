@@ -1,12 +1,10 @@
 #include "connection.h"
 #include <QSqlError>
-
+#include <QDebug>
 
 Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
     socket = new QTcpSocket(this);
     socket->setSocketDescriptor(handle);
-    location = "";
-    nickname = "";
 
     lastMessages.clear();
 
@@ -16,7 +14,7 @@ Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
 }
 
 void Connection::send(QJsonDocument message){
-    qDebug() << message.toJson();
+    qDebug() << message.toJson() << '\n';
     socket->write(message.toJson());
 }
 
@@ -28,34 +26,95 @@ QJsonObject Connection::authorization(QJsonObject request){
     QJsonObject response;
     response.insert("Target", "Authorization");
 
-    QSqlQuery query;
-    query.prepare("SELECT ID FROM users WHERE (Nickname=? OR Email=?) AND Password=?");
-    query.bindValue(0, request.value("Login").toString());
-    query.bindValue(1, request.value("Login").toString());
-    query.bindValue(2, request.value("Password").toString());
-    query.exec();
+    if(request.contains("Access token")){
+        nickname = request.value("Nickname").toString();
 
-    QString id="";
-    while (query.next())
-        id = query.value(0).toString();
-
-    if(id != ""){
-        nickname = request.value("Login").toString();
-        location = "Global chat";
-        response.insert("Value", "Authorization successful");
-
-        query.prepare("SELECT LastBan FROM users WHERE Nickname = ?");
+        QSqlQuery query;
+        query.prepare("SELECT TokenTime, RefreshToken, LastBan FROM users WHERE AccessToken = ? AND Nickname = ?");
+        query.addBindValue(request.value("Access token").toString());
         query.addBindValue(nickname);
         query.exec();
 
-        while(query.next())
-            banFinish = query.value(0).toInt();
+        while(query.next()){
+            tokenTime = query.value(0).toInt();
+            refreshToken = query.value(1).toString();
+            banFinish = query.value(2).toInt();
+        }
 
-        if(QDateTime::currentDateTime().toTime_t() < banFinish)
-            response.insert("Ban", banFinish);
+        if(tokenTime <= int(QDateTime::currentDateTime().toTime_t())){
+            response.erase(response.find("Target"));
+            response.insert("Target", "Token refreshing");
+        }
+        else{
+            if(location == "")
+                location = "Global chat";
+
+            accessToken = request.value("Access token").toString();
+            response.insert("Value", "Authorization successful");
+
+            if(banFinish < QDateTime::currentDateTime().toTime_t())
+                response.insert("Ban", int(banFinish));
+        }
     }
-    else
-        response.insert("Value", "Authorization failed");
+    else{
+        QSqlQuery query;
+        query.prepare("SELECT TokenTime, Nickname, RefreshToken FROM users WHERE (Nickname=? OR Email=?) AND Password=?");
+        query.bindValue(0, request.value("Login").toString());
+        query.bindValue(1, request.value("Login").toString());
+        query.bindValue(2, request.value("Password").toString());
+        query.exec();
+
+        QString nickname;
+        while (query.next()){
+            tokenTime = query.value(0).toInt();
+            nickname = query.value(1).toString();
+            refreshToken = query.value(2).toString();
+        }
+
+        if(tokenTime != -1){
+            response.insert("Value", "Authorization successful");
+
+            this->nickname = nickname;
+            location = "Global chat";
+
+            if(tokenTime <= int(QDateTime::currentDateTime().toTime_t())){
+                accessTokenRefreshing();
+                if(refreshToken == ""){
+                    refreshToken = QString().append(QCryptographicHash::hash(accessToken.toUtf8() + QByteArray::number(qrand()) + QByteArray::number(QDateTime::currentDateTime().toTime_t()), QCryptographicHash::Md5).toHex());
+
+                    query.prepare("UPDATE users SET RefreshToken = ? WHERE Nickname = ?");
+                    query.bindValue(0, refreshToken);
+                    query.bindValue(1, nickname);
+                    query.exec();
+                }
+            }
+            else{
+                query.prepare("SELECT AccessToken FROM users WHERE Nickname = ?");
+                query.addBindValue(nickname);
+
+                query.exec();
+                while(query.next())
+                    accessToken = query.value(0).toString();
+
+            }
+
+            response.insert("Access token", accessToken);
+            response.insert("Refresh token", refreshToken);
+            response.insert("Nickname", nickname);
+
+            query.prepare("SELECT LastBan FROM users WHERE Nickname = ?");
+            query.addBindValue(nickname);
+            query.exec();
+
+            while(query.next())
+                banFinish = query.value(0).toInt();
+
+            if(QDateTime::currentDateTime().toTime_t() < banFinish)
+                response.insert("Ban", int(banFinish));
+        }
+        else
+            response.insert("Value", "Authorization failed");
+    }
 
     return response;
 }
@@ -178,14 +237,15 @@ QJsonObject Connection::recoveryCode(QJsonObject request){
 
     QString code = "";
     query.prepare("SELECT Code FROM recoveryQueue WHERE Email = ?");
-    query.bindValue(0, email);
+    query.addBindValue(email);
     query.exec();
 
     while(query.next())
         code = query.value(0).toString();
 
     if(request.value("Code") == code){
-        query.prepare("UPDATE recoveryQueue SET Code = 'Confirmed'");
+        query.prepare("UPDATE recoveryQueue SET Code = 'Confirmed' WHERE Email = ?");
+        query.addBindValue(email);
         query.exec();
 
         response.insert("Value", "Right code");
@@ -297,8 +357,20 @@ QJsonObject Connection::bansHistory(int page){
     return response;
 }
 
+void Connection::accessTokenRefreshing(){
+    accessToken = QString().append(QCryptographicHash::hash(nickname.toUtf8() + QByteArray::number(qrand()) + QByteArray::number(QDateTime::currentDateTime().toTime_t()), QCryptographicHash::Md5).toHex());
+    tokenTime = QDateTime::currentDateTime().toTime_t() + 60*60*24;
+
+    QSqlQuery query;
+    query.prepare("UPDATE users SET AccessToken = ?, TokenTime = ? WHERE Nickname = ?");
+    query.bindValue(0, accessToken);
+    query.bindValue(1, tokenTime);
+    query.bindValue(2, nickname);
+    query.exec();
+}
+
 void Connection::sendGlobalMessage(QJsonObject request){
-    if(nickname == "" || location != "Global chat" || QDateTime::currentDateTime().toTime_t() < banFinish)
+    if(location != "Global chat" || QDateTime::currentDateTime().toTime_t() < banFinish)
         return;
 
     QJsonObject response;
@@ -329,7 +401,6 @@ void Connection::sendGlobalMessage(QJsonObject request){
                 count++;
         }
         if(count>=3 && floodCounter<3){
-            qDebug() << "Flood";
             floodCounter++;
             floodTimer = QDateTime::currentDateTime().toTime_t()+3*floodCounter;
             response.insert("Value", "Flood");
@@ -339,7 +410,7 @@ void Connection::sendGlobalMessage(QJsonObject request){
         else if(count>=3){
             QSqlQuery query;
             query.prepare("UPDATE users SET LastBan = ? WHERE Nickname = ?");
-            query.bindValue(0, QDateTime::currentDateTime().toTime_t()+14400);//4 hours for flood
+            query.bindValue(0, QDateTime::currentDateTime().toTime_t()+14400); //4 hours for flood
             query.bindValue(1, nickname);
             if(!query.exec())
                 qDebug() << query.lastError().text();
@@ -405,6 +476,9 @@ QJsonObject Connection::banFinished(){
 QJsonObject Connection::exit(){
     nickname = "";
     location = "";
+    accessToken = "";
+    refreshToken = "";
+    tokenTime = -1;
 
     QJsonObject response;
     response.insert("Target", "Exit");
@@ -418,11 +492,13 @@ void Connection::disconnecting(){
 
 void Connection::controller(){
     QByteArray receivedObject = socket->readAll();
+    QJsonObject response;
 
     QJsonParseError error;
 
     QJsonObject request = QJsonDocument::fromJson(receivedObject, &error).object();
-    QJsonObject response;
+
+    qDebug() << nickname << location << accessToken << refreshToken << tokenTime << '\n';
 
     if(error.error == QJsonParseError::NoError){
         if(request.value("Target").toString() == "Authorization")
@@ -437,32 +513,76 @@ void Connection::controller(){
             response = recoveryCode(request);
         else if(request.value("Target").toString() == "Recovery new pass")
             response = recoveryNewPass(request);
-        else if(request.value("Target").toString() == "PMessage"){
-            //TODO
-        }
-        else if(request.value("Target").toString() == "GMessage"){
-            if(QDateTime::currentDateTime().toTime_t() < floodTimer)
-                return;
-            sendGlobalMessage(request);
-            return;
-        }
-        else if(request.value("Target").toString() == "Post"){
-            //TODO
-        }
         else if(request.value("Target").toString() == "DoesNicknameExist")
             response = doesNicknameExist(request);
-        else if(request.value("Target").toString() == "Ban finished")
-            response = banFinished();
-        else if(request.value("Target").toString() == "Exit")
-            response = exit();
-        else if(request.value("Target").toString() == "Bans history")
-            response = bansHistory(request.value("Page").toInt());
-        else if(request.value("Target").toString() == "Location"){
-            location = request.value("Value").toString() < 20 ? request.value("Value").toString() : request.value("Value").toString().left(20);
-            return;
-        }
-    }
+        //ACCESS TOKEN CHECKING
+        else if(request.value("Target").toString() == "Token refreshing"){
+            QSqlQuery query;
+            query.prepare("SELECT AccessToken, TokenTime FROM users WHERE Nickname = ? AND RefreshToken = ?");
+            query.bindValue(0, nickname);
+            query.bindValue(1, request.value("Refresh token").toString());
+            query.exec();
 
+            QString accessToken = "";
+            while(query.next()){
+                accessToken = query.value(0).toString();
+                tokenTime = query.value(1).toInt();
+            }
+
+            if(accessToken == "")
+                response.insert("Target", "Exit");
+            else{
+                if(tokenTime <= int(QDateTime::currentDateTime().toTime_t()))
+                    accessTokenRefreshing();
+                else
+                    this->accessToken = accessToken;
+
+                response.insert("Target", "Token refreshed");
+                response.insert("Nickname", nickname);
+                response.insert("Access token", this->accessToken);
+            }
+        }
+        else{
+            QSqlQuery query;
+                query.prepare("SELECT RefreshToken, TokenTime FROM users WHERE Nickname = ? AND AccessToken = ?");
+                query.addBindValue(nickname);
+                query.addBindValue(accessToken);
+                query.exec();
+
+                QString refreshToken = "";
+                while (query.next()){
+                    refreshToken = query.value(0).toString();
+                    tokenTime = query.value(1).toInt();
+                }
+
+                if(tokenTime <= int(QDateTime::currentDateTime().toTime_t()) || refreshToken == "")
+                    response.insert("Target", "Token refreshing");
+                else{
+                    if(request.value("Target").toString() == "PMessage"){
+                        //TODO
+                    }
+                    else if(request.value("Target").toString() == "GMessage"){
+                        if(QDateTime::currentDateTime().toTime_t() < floodTimer)
+                            return;
+                        sendGlobalMessage(request);
+                        return;
+                    }
+                    else if(request.value("Target").toString() == "Post"){
+                        //TODO
+                    }
+                    else if(request.value("Target").toString() == "Ban finished")
+                        response = banFinished();
+                    else if(request.value("Target").toString() == "Exit")
+                        response = exit();
+                    else if(request.value("Target").toString() == "Bans history")
+                        response = bansHistory(request.value("Page").toInt());
+                    else if(request.value("Target").toString() == "Location"){
+                        location = request.value("Value").toString() < 20 ? request.value("Value").toString() : request.value("Value").toString().left(20);
+                        return;
+                    }
+                }
+            }
+        }
     socket->write(QJsonDocument(response).toJson());
 }
 

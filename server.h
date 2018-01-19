@@ -21,10 +21,12 @@ private:
     QHash<qintptr, Connection*> connections;
     MessageSender messageSender;
     QThread senderThread;
+    QTcpSocket *socket;
 
 private slots:
     void deleteConnection(qintptr);
     void dispatchingMessage();
+    void ftpReading();
 };
 
 #endif // SERVER_H

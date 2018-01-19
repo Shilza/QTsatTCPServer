@@ -24,12 +24,15 @@ public:
 
 private:
     QTcpSocket *socket;
-    QString nickname;
-    QString location;
+    QString nickname = "";
+    QString location = "";
+    QString accessToken = "";
+    QString refreshToken = "";
+    int tokenTime = -1;
     QQueue<QString> lastMessages;
     quint8 floodCounter = 0;
     int floodTimer = 0;
-    int banFinish = 0;
+    uint banFinish = 0;
 
     QJsonObject authorization(QJsonObject);
     QJsonObject registration(QJsonObject);
@@ -41,6 +44,7 @@ private:
     QJsonObject doesEmailExist(QJsonObject);
     QJsonObject bansHistory(int);
 
+    void accessTokenRefreshing();
     void sendGlobalMessage(QJsonObject);
     QJsonObject banFinished();
     QJsonObject exit();
