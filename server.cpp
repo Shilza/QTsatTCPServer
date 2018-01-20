@@ -1,17 +1,16 @@
 #include "server.h"
 
 Server::Server(QObject *parent) : QTcpServer(parent){
-    socket = new QTcpSocket(this);
+    ftpSocket = new QTcpSocket(this);
+    ftpSocket->connectToHost(QHostAddress::LocalHost, FTP_PORT);
 
     connections.clear();
 
     messageSender.setConnections(&connections);
-    //messageSender.moveToThread(&senderThread);
 
     listen(QHostAddress::Any, PORT);
 
-    //connect(&senderThread, SIGNAL(started()), &messageSender, SLOT(start()));
-    //connect(&messageSender, SIGNAL(finished()), &senderThread, SLOT(quit()));
+    connect(ftpSocket, SIGNAL(readyRead()), SLOT(ftpController()));
 }
 
 
@@ -30,7 +29,45 @@ void Server::dispatchingMessage(){
         messageSender.start();
 }
 
-void Server::ftpReading(){
-    QByteArray request = socket->readAll();
-    qDebug() << request;
+void Server::ftpController(){
+    QByteArray receivedObject = ftpSocket->readAll();
+
+    QJsonObject response;
+    QJsonObject request = QJsonDocument::fromJson(receivedObject).object();
+
+    if(request.value("Target").toString() == "Post"){
+        response.insert("Target", "Post");
+        response.insert("Socket handle", request.value("Socket handle").toInt());
+        response.insert("Location", request.value("Location").toString());
+
+        QSqlQuery query;
+        int ban = -1;
+        int id = -1;
+        query.prepare("SELECT LastBan, ID FROM users WHERE AccessToken = ? AND Nickname = ?");
+        query.bindValue(0, request.value("Access token").toString());
+        query.bindValue(1, request.value("Nickname").toString());
+        query.exec();
+
+        while(query.next()){
+            ban = query.value(0).toInt();
+            id = query.value(1).toInt();
+        }
+
+        if((ban == -1 && id == -1) || ban >= int(QDateTime::currentDateTime().toTime_t()))
+            response.insert("Value", "Deny");
+        else if(request.value("Location").toString() == "Global chat"){
+            response.insert("ID", id);
+            response.insert("Value", "Allow");
+        }
+    }
+
+    ftpSocket->write(QJsonDocument(response).toJson());
 }
+
+
+
+
+
+
+
+

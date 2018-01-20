@@ -24,5 +24,6 @@ const QString EMAIL_PASSWORD_CHANGED_BODY = "Dear %1, your password in QTsat has
 #define MAX_GLOBAL_MESSAGE_SIZE 140
 
 #define PORT 40000
+#define FTP_PORT 40002
 
 #endif // DEF_H

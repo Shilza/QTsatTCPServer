@@ -538,7 +538,6 @@ void Connection::controller(){
                     this->accessToken = accessToken;
 
                 response.insert("Target", "Token refreshed");
-                response.insert("Nickname", nickname);
                 response.insert("Access token", this->accessToken);
             }
         }
