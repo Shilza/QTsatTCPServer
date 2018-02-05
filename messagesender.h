@@ -21,9 +21,6 @@ public slots:
 private:
     quint64 lastMessage = 0;
     QHash<qintptr, Connection*> *connections;
-
-signals:
-    void finished();
 };
 
 #endif // SENDER_H

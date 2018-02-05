@@ -1,11 +1,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <QObject>
 #include <QTcpServer>
 #include <QTcpSocket>
-#include <QVector>
-#include <QThread>
 #include "connection.h"
 #include "messagesender.h"
 #include "def.h"
@@ -20,7 +17,6 @@ private:
     void incomingConnection(qintptr handle);
     QHash<qintptr, Connection*> connections;
     MessageSender messageSender;
-    QThread senderThread;
     QTcpSocket *ftpSocket;
 
 private slots:

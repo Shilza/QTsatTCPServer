@@ -14,7 +14,6 @@ void MessageSender::setConnections(QHash<qintptr, Connection *> *connections){
     this->connections = connections;
 }
 
-
 void MessageSender::start(){
     isRunning = true;
     QSqlQuery query;
@@ -44,6 +43,5 @@ void MessageSender::start(){
                 a->send(document);
         }
     }
-    emit finished();
     isRunning = false;
 }
