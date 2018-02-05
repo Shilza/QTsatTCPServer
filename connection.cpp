@@ -539,49 +539,50 @@ void Connection::controller(){
 
                 response.insert("Target", "Token refreshed");
                 response.insert("Access token", this->accessToken);
+                response.insert("Nickname", nickname);
             }
         }
         else{
             QSqlQuery query;
-                query.prepare("SELECT RefreshToken, TokenTime FROM users WHERE Nickname = ? AND AccessToken = ?");
-                query.addBindValue(nickname);
-                query.addBindValue(accessToken);
-                query.exec();
+            query.prepare("SELECT RefreshToken, TokenTime FROM users WHERE Nickname = ? AND AccessToken = ?");
+            query.addBindValue(nickname);
+            query.addBindValue(accessToken);
+            query.exec();
 
-                QString refreshToken = "";
-                while (query.next()){
-                    refreshToken = query.value(0).toString();
-                    tokenTime = query.value(1).toInt();
+            QString refreshToken = "";
+            while (query.next()){
+                refreshToken = query.value(0).toString();
+                tokenTime = query.value(1).toInt();
+            }
+
+            if(tokenTime <= int(QDateTime::currentDateTime().toTime_t()) || refreshToken == "")
+                response.insert("Target", "Token refreshing");
+            else{
+                if(request.value("Target").toString() == "PMessage"){
+                    //TODO
                 }
-
-                if(tokenTime <= int(QDateTime::currentDateTime().toTime_t()) || refreshToken == "")
-                    response.insert("Target", "Token refreshing");
-                else{
-                    if(request.value("Target").toString() == "PMessage"){
-                        //TODO
-                    }
-                    else if(request.value("Target").toString() == "GMessage"){
-                        if(QDateTime::currentDateTime().toTime_t() < floodTimer)
-                            return;
-                        sendGlobalMessage(request);
+                else if(request.value("Target").toString() == "GMessage"){
+                    if(QDateTime::currentDateTime().toTime_t() < floodTimer)
                         return;
-                    }
-                    else if(request.value("Target").toString() == "Post"){
-                        //TODO
-                    }
-                    else if(request.value("Target").toString() == "Ban finished")
-                        response = banFinished();
-                    else if(request.value("Target").toString() == "Exit")
-                        response = exit();
-                    else if(request.value("Target").toString() == "Bans history")
-                        response = bansHistory(request.value("Page").toInt());
-                    else if(request.value("Target").toString() == "Location"){
-                        location = request.value("Value").toString() < 20 ? request.value("Value").toString() : request.value("Value").toString().left(20);
-                        return;
-                    }
+                    sendGlobalMessage(request);
+                    return;
+                }
+                else if(request.value("Target").toString() == "Post"){
+                    //TODO
+                }
+                else if(request.value("Target").toString() == "Ban finished")
+                    response = banFinished();
+                else if(request.value("Target").toString() == "Exit")
+                    response = exit();
+                else if(request.value("Target").toString() == "Bans history")
+                    response = bansHistory(request.value("Page").toInt());
+                else if(request.value("Target").toString() == "Location"){
+                    location = request.value("Value").toString() < 20 ? request.value("Value").toString() : request.value("Value").toString().left(20);
+                    return;
                 }
             }
         }
+    }
     socket->write(QJsonDocument(response).toJson());
 }
 
