@@ -23,7 +23,8 @@ SOURCES += main.cpp \
     messagesender.cpp \
     distance_damerau_levenshtein.cpp \
     smtp.cpp \
-    connection.cpp
+    connection.cpp \
+    crypto.cpp
 
 HEADERS += \
     server.h \
@@ -31,4 +32,5 @@ HEADERS += \
     messagesender.h \
     distance_damerau_levenshtein.h \
     smtp.h \
-    connection.h
+    connection.h \
+    crypto.h

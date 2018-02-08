@@ -14,6 +14,7 @@
 #include "distance_damerau_levenshtein.h"
 #include "smtp.h"
 #include "def.h"
+#include "crypto.h"
 
 class Connection : public QObject{
     Q_OBJECT

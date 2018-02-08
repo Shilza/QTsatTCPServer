@@ -61,7 +61,7 @@ QJsonObject Connection::authorization(QJsonObject request){
         query.prepare("SELECT TokenTime, Nickname, RefreshToken FROM users WHERE (Nickname=? OR Email=?) AND Password=?");
         query.bindValue(0, request.value("Login").toString());
         query.bindValue(1, request.value("Login").toString());
-        query.bindValue(2, request.value("Password").toString());
+        query.bindValue(2, hashPassword(request.value("Login").toString(), request.value("Password").toString()));
         query.exec();
 
         QString nickname;
@@ -171,11 +171,15 @@ QJsonObject Connection::registrationCode(QJsonObject request){
         query.bindValue(0, request.value("Email").toString());
         query.exec();
 
-        query.prepare("INSERT INTO users (Email, Nickname, Password, Date) VALUES (?, ?, ?, ?)");
+        uint registrationTime = QDateTime::currentDateTime().toTime_t();
+        QPair<Salt, Password> pair = hashPassword(request.value("Password").toString(), registrationTime);
+
+        query.prepare("INSERT INTO users (Email, Nickname, Password, Date, Salt) VALUES (?, ?, ?, ?, ?)");
         query.bindValue(0, request.value("Email").toString());
         query.bindValue(1, request.value("Nickname").toString());
-        query.bindValue(2, request.value("Password").toString());
-        query.bindValue(3, QDateTime::currentDateTime().toTime_t());
+        query.bindValue(2, pair.second);
+        query.bindValue(3, registrationTime);
+        query.bindValue(4, pair.first);
         query.exec();
 
         response.insert("Value", "Registration successful");
@@ -287,9 +291,19 @@ QJsonObject Connection::recoveryNewPass(QJsonObject request){
         query.bindValue(0, email);
         query.exec();
 
-        query.prepare("UPDATE users SET Password=? WHERE Email=?");
-        query.bindValue(0, request.value("Password"));
-        query.bindValue(1, email);
+        query.prepare("SELECT Date FROM users WHERE Email = ?");
+        query.addBindValue(email);
+        query.exec();
+
+        int date;
+        while(query.next())
+            date = query.value(0).toInt();
+
+        QPair<Salt, Password> pair = hashPassword(request.value("Password").toString(), date);
+        query.prepare("UPDATE users SET Password=?, Salt=? WHERE Email=?");
+        query.bindValue(0, pair.second);
+        query.bindValue(1, pair.first);
+        query.bindValue(2, email);
         query.exec();
 
         response.insert("Value", "Password changed successfully");
