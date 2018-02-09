@@ -512,8 +512,6 @@ void Connection::controller(){
 
     QJsonObject request = QJsonDocument::fromJson(receivedObject, &error).object();
 
-    qDebug() << nickname << location << accessToken << refreshToken << tokenTime << '\n';
-
     if(error.error == QJsonParseError::NoError){
         if(request.value("Target").toString() == "Authorization")
             response = authorization(request);
