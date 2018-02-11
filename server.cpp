@@ -55,7 +55,7 @@ void Server::ftpController(){
 
         if((ban == -1 && id == -1) || ban >= int(QDateTime::currentDateTime().toTime_t()))
             response.insert("Value", "Deny");
-        else if(request.value("Location").toString() == "Global chat"){
+        else if(request.value("Location").toString() == "GlobalChat"){
             response.insert("ID", id);
             response.insert("Value", "Allow");
         }

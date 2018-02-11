@@ -39,7 +39,7 @@ void MessageSender::start(){
 
         QJsonDocument document(result);
         for(Connection* a : *connections){
-            if (a->getLocation() == "Global chat")
+            if (a->getLocation() == "GlobalChat")
                 a->send(document);
         }
     }

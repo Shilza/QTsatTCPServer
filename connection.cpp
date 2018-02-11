@@ -47,7 +47,7 @@ QJsonObject Connection::authorization(QJsonObject request){
         }
         else{
             if(location == "")
-                location = "Global chat";
+                location = "GlobalChat";
 
             accessToken = request.value("Access token").toString();
             response.insert("Value", "Authorization successful");
@@ -75,7 +75,7 @@ QJsonObject Connection::authorization(QJsonObject request){
             response.insert("Value", "Authorization successful");
 
             this->nickname = nickname;
-            location = "Global chat";
+            location = "GlobalChat";
 
             if(tokenTime <= int(QDateTime::currentDateTime().toTime_t())){
                 accessTokenRefreshing();
@@ -384,7 +384,7 @@ void Connection::accessTokenRefreshing(){
 }
 
 void Connection::sendGlobalMessage(QJsonObject request){
-    if(location != "Global chat" || QDateTime::currentDateTime().toTime_t() < banFinish)
+    if(location != "GlobalChat" || QDateTime::currentDateTime().toTime_t() < banFinish)
         return;
 
     QJsonObject response;
