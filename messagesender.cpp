@@ -18,18 +18,22 @@ void MessageSender::start(){
     isRunning = true;
     QSqlQuery query;
     while(true){
-        query.prepare("SELECT Sender, Text, Time FROM messages WHERE id = ?");
+        query.prepare("SELECT Sender, Text, Time, Attachment FROM messages WHERE id = ?");
         query.bindValue(0, ++lastMessage);
         query.exec();
 
         QJsonObject result;
         bool temp = false;
+        QString attachment = "";
         while (query.next()){
             temp = true;
             result.insert("Target", "Message delivery");
             result.insert("Nickname", query.value(0).toString());
             result.insert("Message", query.value(1).toString());
             result.insert("Time", query.value(2).toInt());
+            attachment = query.value(3).toString();
+            if(attachment != "")
+                result.insert("Attachment", attachment);
         }
 
         if(!temp){

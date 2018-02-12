@@ -453,18 +453,22 @@ void Connection::sendGlobalMessage(QJsonObject request){
         lastMessages.push_back(text);
 
         QSqlQuery query;
-        query.prepare("INSERT INTO messages (Sender, Text, Time) VALUES (?, ?, ?)");
+
+        if(request.contains("Attachment") && request.value("Attachment").toString().length() <= 100){
+            query.prepare("INSERT INTO messages (Sender, Text, Time, Attachment) VALUES (?, ?, ?, ?)");
+            query.bindValue(3, request.value("Attachment").toString());
+        }
+        else
+            query.prepare("INSERT INTO messages (Sender, Text, Time) VALUES (?, ?, ?)");
+
         query.bindValue(0, nickname);
         query.bindValue(1, text);
         query.bindValue(2, QDateTime::currentDateTime().toTime_t());
-        if(query.exec()){
-            socket->write(QJsonDocument(response).toJson());
-            socket->waitForBytesWritten();
-            emit dispatchMessage();
-            return;
-        }
-        else
-            qDebug() << query.lastError().text();
+        query.exec();
+        socket->write(QJsonDocument(response).toJson());
+        socket->waitForBytesWritten();
+        emit dispatchMessage();
+        return;
     }
     socket->write(QJsonDocument(response).toJson());
 }
@@ -574,7 +578,7 @@ void Connection::controller(){
                     //TODO
                 }
                 else if(request.value("Target").toString() == "GMessage"){
-                    if(QDateTime::currentDateTime().toTime_t() < floodTimer)
+                    if(int(QDateTime::currentDateTime().toTime_t()) < floodTimer)
                         return;
                     sendGlobalMessage(request);
                     return;
