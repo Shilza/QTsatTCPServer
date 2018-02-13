@@ -583,9 +583,6 @@ void Connection::controller(){
                     sendGlobalMessage(request);
                     return;
                 }
-                else if(request.value("Target").toString() == "Post"){
-                    //TODO
-                }
                 else if(request.value("Target").toString() == "Ban finished")
                     response = banFinished();
                 else if(request.value("Target").toString() == "Exit")

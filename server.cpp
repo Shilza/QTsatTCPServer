@@ -60,6 +60,26 @@ void Server::ftpController(){
             response.insert("Value", "Allow");
         }
     }
+    else if(request.value("Target").toString() == "Get"){
+        response.insert("Target", "Get");
+        response.insert("Socket handle", request.value("Socket handle").toInt());
+        response.insert("Reference",  request.value("Reference").toString());
+
+        QSqlQuery query;
+        int id = -1;
+        query.prepare("SELECT ID FROM users WHERE AccessToken = ? AND Nickname = ?");
+        query.bindValue(0, request.value("Access token").toString());
+        query.bindValue(1, request.value("Nickname").toString());
+        query.exec();
+
+        while(query.next())
+            id = query.value(0).toInt();
+
+        if(id == -1)
+            response.insert("Value", "Deny");
+        else
+            response.insert("Value", "Allow");
+    }
 
     ftpSocket->write(QJsonDocument(response).toJson());
 }
