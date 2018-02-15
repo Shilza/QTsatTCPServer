@@ -59,6 +59,13 @@ void Server::ftpController(){
             response.insert("ID", id);
             response.insert("Value", "Allow");
         }
+        /*
+        else if(request.value("Location").toString() == "Avatar"){
+            response.insert("ID", id);
+            response.insert("Value", "Allow");
+            query.prepare("UPDATE users SET Avatar=? WHERE ID = ?");
+        }
+        */
     }
     else if(request.value("Target").toString() == "Get"){
         response.insert("Target", "Get");
