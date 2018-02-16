@@ -1,5 +1,4 @@
 #include "connection.h"
-#include <QSqlError>
 #include <QDebug>
 
 Connection::Connection(qintptr handle, QObject *parent) : QObject(parent){
@@ -426,8 +425,7 @@ void Connection::sendGlobalMessage(QJsonObject request){
             query.prepare("UPDATE users SET LastBan = ? WHERE Nickname = ?");
             query.bindValue(0, QDateTime::currentDateTime().toTime_t()+14400); //4 hours for flood
             query.bindValue(1, nickname);
-            if(!query.exec())
-                qDebug() << query.lastError().text();
+            query.exec();
 
             //for bans history
             banFinish = QDateTime::currentDateTime().toTime_t()+14400;
@@ -436,8 +434,7 @@ void Connection::sendGlobalMessage(QJsonObject request){
             query.bindValue(1, text);
             query.bindValue(2, QDateTime::currentDateTime().toTime_t());
             query.bindValue(3, banFinish);
-            if(!query.exec())
-                qDebug() << query.lastError().text();
+            query.exec();
 
             response.insert("Value", "Ban");
             response.insert("Time", int(QDateTime::currentDateTime().toTime_t()+14400));

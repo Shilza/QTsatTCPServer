@@ -53,19 +53,23 @@ void Server::ftpController(){
             id = query.value(1).toInt();
         }
 
-        if((ban == -1 && id == -1) || ban >= int(QDateTime::currentDateTime().toTime_t()))
+        if(id != -1){
+            if(request.value("Location").toString() == "GlobalChat"){
+                if(ban != -1 && ban < int(QDateTime::currentDateTime().toTime_t())){
+                    response.insert("ID", id);
+                    response.insert("Value", "Allow");
+                }
+                else
+                    response.insert("Value", "Deny");
+            }
+            else if(request.value("Location").toString() == "Avatar"){
+                response.insert("ID", id);
+                response.insert("Value", "Allow");
+                response.insert("Location", "Profiles/" + QString::number(id) + "/Avatars");
+            }
+        }
+        else
             response.insert("Value", "Deny");
-        else if(request.value("Location").toString() == "GlobalChat"){
-            response.insert("ID", id);
-            response.insert("Value", "Allow");
-        }
-        /*
-        else if(request.value("Location").toString() == "Avatar"){
-            response.insert("ID", id);
-            response.insert("Value", "Allow");
-            query.prepare("UPDATE users SET Avatar=? WHERE ID = ?");
-        }
-        */
     }
     else if(request.value("Target").toString() == "Get"){
         response.insert("Target", "Get");
@@ -86,6 +90,14 @@ void Server::ftpController(){
             response.insert("Value", "Deny");
         else
             response.insert("Value", "Allow");
+    }
+    else if(request.value("Target").toString() == "AvatarChanged"){
+        QSqlQuery query;
+        query.prepare("UPDATE users SET Avatar=? WHERE ID=?");
+        query.bindValue(0, request.value("Reference").toString());
+        query.bindValue(1, request.value("ID").toInt());
+        query.exec();
+        return;
     }
 
     ftpSocket->write(QJsonDocument(response).toJson());
